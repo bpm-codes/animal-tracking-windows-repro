@@ -9,6 +9,7 @@ import sys
 import sysconfig
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from pathlib import Path
 
 from PIL import Image
@@ -94,7 +95,7 @@ def run() -> dict[str, object]:
 
     with tempfile.TemporaryDirectory(prefix="p6-sqlite-") as temp:
         database = Path(temp) / "stress.sqlite3"
-        with sqlite3.connect(database) as connection:
+        with closing(sqlite3.connect(database)) as connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute(
                 "CREATE TABLE stress ("
@@ -106,7 +107,7 @@ def run() -> dict[str, object]:
             )
         with ThreadPoolExecutor(max_workers=12) as pool:
             sqlite_results = list(pool.map(lambda worker: sqlite_writer(database, worker), range(12)))
-        with sqlite3.connect(database) as connection:
+        with closing(sqlite3.connect(database)) as connection:
             row_count = connection.execute("SELECT COUNT(*) FROM stress").fetchone()[0]
 
     if row_count != 12 * 80:
